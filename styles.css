@@ -141,12 +141,13 @@ textarea {
 
 .messages {
   position: relative;
-  z-index: 7;
+  z-index: 8;
   height: 100%;
   overflow-y: auto;
   padding: 22px 76px 26px 22px;
   scroll-behavior: smooth;
-  pointer-events: none;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .messages::-webkit-scrollbar {
@@ -276,10 +277,10 @@ textarea {
 .keyboard-capture {
   position: absolute;
   left: 0;
-  top: 0;
+  bottom: 0;
   z-index: 8;
   width: 100%;
-  height: 100%;
+  height: 42%;
   border: 0;
   padding: 0;
   opacity: 0;
