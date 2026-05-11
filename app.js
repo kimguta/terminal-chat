@@ -128,9 +128,7 @@ async function getBootMessage() {
   });
 
   try {
-    const response = await fetch("/api/status");
-    if (!response.ok) throw new Error("Status unavailable");
-    const status = await response.json();
+    const status = await fetchStatusWithRetry();
 
     return buildBootMessage({
       server: status.server || DEFAULT_BOOT_STATUS.server,
@@ -141,6 +139,23 @@ async function getBootMessage() {
   } catch {
     return buildBootMessage({ ...DEFAULT_BOOT_STATUS, now });
   }
+}
+
+async function fetchStatusWithRetry() {
+  let lastError;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch("/api/status", { cache: "no-store" });
+      if (!response.ok) throw new Error("Status unavailable");
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+      await sleep(350);
+    }
+  }
+
+  throw lastError;
 }
 
 function buildBootMessage(status) {
@@ -247,7 +262,7 @@ function createServiceErrorReply(status, errorData) {
     return "API 키를 못 찾고 있어. 그러면 내가 똑똑한 척을 못 하지. .env부터 확인해.";
   }
 
-  return "AI 연결이 실패했어. 방금 같은 랜덤 헛소리는 이제 안 할게.";
+  return "AI 연결이 실패했어. 주소가 onrender.com 맞는지 봐. 아니면 새로고침 한 번 해, 귀찮겠지만.";
 }
 
 async function submitCurrentLine() {
