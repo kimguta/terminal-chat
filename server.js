@@ -48,7 +48,7 @@ function handleStatus(response) {
   sendJson(response, 200, {
     server: "ONLINE",
     model,
-    api: process.env.GEMINI_API_KEY ? "READY" : "LOCAL FALLBACK",
+    api: process.env.GEMINI_API_KEY ? "KEY SET" : "LOCAL ONLY",
     startedAt: new Date().toISOString(),
   });
 }
