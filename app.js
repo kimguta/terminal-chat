@@ -337,6 +337,15 @@ terminalEl.addEventListener("pointerdown", (event) => {
   }
 });
 
+terminalEl.addEventListener(
+  "wheel",
+  (event) => {
+    messagesEl.scrollTop += event.deltaY;
+    event.preventDefault();
+  },
+  { passive: false },
+);
+
 resetButton.addEventListener("click", resetChat);
 
 resetChat();
