@@ -1,0 +1,287 @@
+:root {
+  color-scheme: dark;
+  --panel: #020403;
+  --ink: #a8ffb2;
+  --ink-soft: #76ff8d;
+  --dim: #39d66a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  font-family: Fixedsys, Terminal, "Perfect DOS VGA 437", "PxPlus IBM VGA8", "Lucida Console", monospace;
+  font-size: 14px;
+  font-smooth: never;
+  -webkit-font-smoothing: none;
+  text-rendering: geometricPrecision;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at center, rgba(31, 185, 84, 0.08), transparent 48%),
+    linear-gradient(180deg, #071009, #020403 70%);
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.terminal {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow:
+    inset 0 0 58px rgba(82, 255, 119, 0.08),
+    inset 0 0 130px rgba(0, 0, 0, 0.55);
+  text-shadow:
+    0 0 6px rgba(184, 255, 194, 0.92),
+    0 0 18px rgba(141, 255, 158, 0.34),
+    1px 0 0 rgba(184, 255, 194, 0.26);
+  cursor: text;
+  animation: crt-flicker 5.6s infinite;
+}
+
+.scanlines {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.028) 0,
+    rgba(255, 255, 255, 0.028) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: screen;
+}
+
+.crt-vignette,
+.crt-glass {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+
+.crt-vignette {
+  z-index: 2;
+  background:
+    radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.18) 80%, rgba(0, 0, 0, 0.48) 100%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.16), transparent 9%, transparent 91%, rgba(0, 0, 0, 0.18));
+}
+
+.crt-glass {
+  z-index: 4;
+  opacity: 0.1;
+  background:
+    linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.06) 18%, transparent 34%),
+    radial-gradient(ellipse at 50% 12%, rgba(255, 255, 255, 0.05), transparent 42%);
+  mix-blend-mode: screen;
+}
+
+.terminal::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: -2%;
+  z-index: 5;
+  border-radius: 45% / 3%;
+  box-shadow:
+    inset 0 0 28px rgba(0, 0, 0, 0.36),
+    inset 0 0 12px rgba(82, 255, 119, 0.08);
+}
+
+.terminal::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -18%;
+  z-index: 6;
+  height: 16%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(125, 255, 145, 0.025),
+    transparent
+  );
+  filter: blur(18px);
+  opacity: 0.55;
+  animation: vertical-roll 24s linear infinite;
+}
+
+.reset-button {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 8;
+  border: 0;
+  padding: 4px 0;
+  color: var(--dim);
+  background: transparent;
+  cursor: pointer;
+}
+
+.reset-button:hover {
+  color: var(--ink);
+  text-shadow: 0 0 8px rgba(82, 255, 119, 0.65);
+}
+
+.messages {
+  position: relative;
+  z-index: 7;
+  height: 100%;
+  overflow-y: auto;
+  padding: 22px 76px 26px 22px;
+  scroll-behavior: smooth;
+}
+
+.messages::-webkit-scrollbar {
+  width: 12px;
+}
+
+.messages::-webkit-scrollbar-track {
+  background: #020403;
+}
+
+.messages::-webkit-scrollbar-thumb {
+  background: var(--dim);
+  border: 3px solid #020403;
+}
+
+.message,
+.input-line {
+  width: 100%;
+  margin: 0 0 12px;
+  line-height: 1.34;
+  letter-spacing: 0;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.message::before,
+.input-line::before {
+  color: var(--ink-soft);
+}
+
+.message.bot::before {
+  content: "A:\\> ";
+}
+
+.message.user::before,
+.input-line::before {
+  content: "C:\\> ";
+}
+
+.message.bot {
+  color: var(--ink);
+  text-shadow:
+    0 0 3px rgba(168, 255, 178, 0.95),
+    0 0 9px rgba(118, 255, 141, 0.38);
+}
+
+.message.user,
+.input-line {
+  color: #cfffD4;
+  text-shadow:
+    0 0 3px rgba(207, 255, 212, 0.95),
+    0 0 9px rgba(118, 255, 141, 0.36);
+}
+
+.message.typing::after,
+.input-line.active::after {
+  content: "";
+  display: inline-block;
+  width: 0.62em;
+  height: 1em;
+  margin-left: 2px;
+  background: var(--ink);
+  box-shadow: 0 0 8px rgba(82, 255, 119, 0.72);
+  vertical-align: -0.18em;
+  animation: blink 0.9s steps(1) infinite;
+}
+
+@keyframes blink {
+  0%,
+  48% {
+    opacity: 1;
+  }
+
+  49%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes crt-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  47% {
+    opacity: 0.985;
+  }
+
+  48% {
+    opacity: 0.955;
+  }
+
+  49% {
+    opacity: 0.99;
+  }
+
+  70% {
+    opacity: 0.975;
+  }
+
+  71% {
+    opacity: 1;
+  }
+}
+
+@keyframes vertical-roll {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(125vh);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terminal,
+  .terminal::after,
+  .message.typing::after,
+  .input-line.active::after {
+    animation: none;
+  }
+}
+
+.keyboard-capture {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+@media (max-width: 560px) {
+  .messages {
+    padding: 16px 64px 20px 16px;
+  }
+}
