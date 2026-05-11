@@ -250,14 +250,19 @@ async function getBotReply(userText) {
 
 function createServiceErrorReply(status, errorData) {
   if (status === 429 || errorData.error === "RATE_LIMITED") {
-    return createLocalReply("");
+    return pickRandom([
+      "지금은 AI 쪽이 꽉 막혔어. 그래서 로컬 농담 모드로 대충 버티는 중. 고급진 척은 잠깐 휴업이다.",
+      "AI 호출이 막혀서 지금은 로컬 말장난만 가능해. 음, 갑자기 동네 분식집 챗봇이 된 기분이네.",
+      "지금은 진짜 AI가 아니라 임시 농담 모드야. 대단한 답은 못 하고, 분위기만 살짝 데우는 정도.",
+      "AI 쪽 문이 잠깐 닫혔어. 그래서 지금 답은 즉석 농담 자판기 버전이야. 품질 보증은 양심상 못 하겠다.",
+    ]);
   }
 
   if (status === 503) {
-    return createLocalReply("");
+    return "API 키가 없어서 지금은 로컬 농담 모드야. 그러니까 똑똑한 척은 못 해. 다행이지, 똑똑한 척 은근 피곤하거든.";
   }
 
-  return createLocalReply("");
+  return "AI 연결이 삐끗했어. 지금은 로컬 농담 모드로 버티는 중. 멋진 답변 기대했으면 미안, 오늘은 소박하게 가자.";
 }
 
 async function submitCurrentLine() {
