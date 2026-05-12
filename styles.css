@@ -293,13 +293,57 @@ textarea {
   -webkit-text-fill-color: transparent;
 }
 
+.mobile-prompt {
+  display: none;
+}
+
 @media (max-width: 560px) {
   .messages {
+    height: calc(100% - 52px);
     padding: 16px 64px 20px 16px;
   }
 
+  .input-line.active {
+    display: none;
+  }
+
   .keyboard-capture {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    display: block;
+    width: 100%;
+    min-height: 52px;
     height: 38%;
+    max-height: 52px;
+    padding: 16px 18px 14px 58px;
+    opacity: 1;
+    color: #cfffD4;
+    background: rgba(2, 4, 3, 0.94);
+    border-top: 1px solid rgba(118, 255, 141, 0.55);
+    caret-color: var(--ink);
     pointer-events: auto;
+    text-shadow:
+      0 0 3px rgba(207, 255, 212, 0.95),
+      0 0 9px rgba(118, 255, 141, 0.36);
+    -webkit-text-fill-color: #cfffD4;
+  }
+
+  .keyboard-capture::placeholder {
+    color: var(--dim);
+  }
+
+  .mobile-prompt {
+    display: block;
+    position: absolute;
+    left: 16px;
+    bottom: 15px;
+    z-index: 11;
+    color: var(--ink-soft);
+    pointer-events: none;
+    text-shadow:
+      0 0 3px rgba(168, 255, 178, 0.95),
+      0 0 9px rgba(118, 255, 141, 0.38);
   }
 }
