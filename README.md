@@ -28,10 +28,10 @@ GitHub Pages만으로는 AI 기능이 동작하지 않습니다. API 키를 숨�
 
 ## 모델
 
-기본 모델은 가벼운 잡담용으로 Groq의 `llama-3.1-8b-instant`를 사용합니다.
+기본 모델은 더 자연스러운 잡담용으로 Groq의 `llama-3.3-70b-versatile`를 사용합니다.
 
 ```env
-GROQ_MODEL=llama-3.1-8b-instant
+GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
 `GROQ_API_KEY`가 없고 `GEMINI_API_KEY`가 있으면 Gemini로 fallback합니다.
