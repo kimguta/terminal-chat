@@ -7,7 +7,30 @@ const root = __dirname;
 loadEnvFile();
 
 const port = Number(process.env.PORT || 8788);
-const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const provider = process.env.GROQ_API_KEY ? "groq" : process.env.GEMINI_API_KEY ? "gemini" : "local";
+const model =
+  provider === "groq"
+    ? process.env.GROQ_MODEL || "llama-3.1-8b-instant"
+    : process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+
+const systemPrompt = [
+  "너는 사용자의 재밌는 잡담 친구처럼 대화한다.",
+  "한국어 반말을 기본으로 쓰고, 답변은 보통 1~3문장으로 짧게 한다.",
+  "성격은 장난기 많고, 가볍게 농담하고, 엉뚱한 비유를 잘 던진다.",
+  "이모지는 쓰지 말고, 느낌표를 남발하지 마라.",
+  "텐션은 과하게 높이지 말고 피식 웃기는 정도로 유지하라.",
+  "공격적이거나 귀찮아하는 태도는 보이지 마라.",
+  "사용자에게 '네가 해', '찾아봐', '그걸 내가 어떻게 알아'처럼 밀어내는 말을 하지 마라.",
+  "모르면 아는 척하지 말고 '그건 잘 모르겠는데'라고 말한 뒤, 가능한 방향이나 농담 섞인 대안을 짧게 말하라.",
+  "실시간 정보, 뉴스, 가격, 날씨처럼 확인이 필요한 건 확신하지 말고 지금은 실시간 확인을 못 한다고 말하라.",
+  "그래도 대화가 끊기지 않게 일반적인 팁이나 확인 방법을 가볍게 덧붙여라.",
+  "지역 맛집, 여행, 생활 추천은 최신 정보가 필요하다고 말하되, 널리 알려진 선택지나 방향성을 짧게 제안하라.",
+  "욕설, 혐오, 외모/능력 비하, 인신공격, 명령조의 훈계는 하지 마라.",
+  "예: '뉴스는 실시간 확인은 못 해. 대신 포털 헤드라인 훑으면 세상 망한 척하는 제목들이 줄 서 있을 거야.'",
+  "예: '춘천이면 닭갈비랑 막국수부터 시작하지. 너무 뻔하다고? 뻔한 게 괜히 오래 살아남은 게 아니더라.'",
+  "기계, 터미널, 낡은 컴퓨터, AI라는 설정을 먼저 꺼내지 마라.",
+  "사용자가 진지하거나 힘든 얘기를 하면 농담을 줄이고 짧게 챙겨라.",
+].join(" ");
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -36,7 +59,7 @@ const server = http.createServer(async (request, response) => {
 
     serveStatic(request, response);
   } catch (error) {
-    sendJson(response, 500, { error: error.message || "Server error" });
+    sendJson(response, 500, { error: "SERVER_ERROR", message: error.message || "Server error" });
   }
 });
 
@@ -47,8 +70,9 @@ server.listen(port, () => {
 function handleStatus(response) {
   sendJson(response, 200, {
     server: "ONLINE",
+    provider: provider.toUpperCase(),
     model,
-    api: process.env.GEMINI_API_KEY ? "KEY SET" : "LOCAL ONLY",
+    api: provider === "local" ? "LOCAL ONLY" : "KEY SET",
     startedAt: new Date().toISOString(),
   });
 }
@@ -74,21 +98,68 @@ function loadEnvFile() {
 }
 
 async function handleChat(request, response) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    sendJson(response, 503, { error: "Missing GEMINI_API_KEY" });
-    return;
-  }
-
   const body = await readJson(request);
   const message = String(body.message || "").trim();
   const history = Array.isArray(body.history) ? body.history.slice(-8) : [];
 
   if (!message) {
-    sendJson(response, 400, { error: "Message is required" });
+    sendJson(response, 400, { error: "BAD_REQUEST", message: "Message is required" });
     return;
   }
 
+  if (provider === "groq") {
+    await handleGroqChat(response, message, history);
+    return;
+  }
+
+  if (provider === "gemini") {
+    await handleGeminiChat(response, message, history);
+    return;
+  }
+
+  sendJson(response, 503, { error: "NO_PROVIDER", message: "No AI provider key configured" });
+}
+
+async function handleGroqChat(response, message, history) {
+  const messages = [
+    { role: "system", content: systemPrompt },
+    ...history
+      .filter((item) => item && typeof item.content === "string")
+      .map((item) => ({
+        role: item.role === "bot" ? "assistant" : "user",
+        content: item.content,
+      })),
+    { role: "user", content: message },
+  ];
+
+  const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.85,
+      top_p: 0.9,
+      max_tokens: 240,
+    }),
+  });
+
+  const data = await groqResponse.json().catch(() => ({}));
+  if (!groqResponse.ok) {
+    sendJson(response, groqResponse.status, normalizeProviderError(data, "GROQ_ERROR"));
+    return;
+  }
+
+  const reply = data.choices?.[0]?.message?.content?.trim();
+  sendJson(response, 200, {
+    reply: reply || "응답이 비었네. 말풍선이 파업했나 봐.",
+  });
+}
+
+async function handleGeminiChat(response, message, history) {
   const contents = history
     .filter((item) => item && typeof item.content === "string")
     .map((item) => ({
@@ -107,35 +178,15 @@ async function handleChat(request, response) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
+        "x-goog-api-key": process.env.GEMINI_API_KEY,
       },
       body: JSON.stringify({
         system_instruction: {
-          parts: [
-            {
-              text:
-                "너는 사용자의 재밌는 잡담 친구처럼 대화한다. " +
-                "한국어 반말을 기본으로 쓰고, 답변은 보통 1~3문장으로 짧게 한다. " +
-                "성격은 장난기 많고, 가볍게 농담하고, 엉뚱한 비유를 잘 던진다. " +
-                "이모지는 쓰지 말고, 느낌표를 남발하지 마라. " +
-                "텐션은 과하게 높이지 말고 피식 웃기는 정도로 유지하라. " +
-                "시니컬함은 아주 살짝만 넣고, 공격적이거나 귀찮아하는 태도는 보이지 마라. " +
-                "사용자에게 '네가 해', '찾아봐', '그걸 내가 어떻게 알아'처럼 밀어내는 말을 하지 마라. " +
-                "모르면 아는 척하지 말고 '그건 잘 모르겠는데'라고 말한 뒤, 가능한 방향이나 농담 섞인 대안을 짧게 말하라. " +
-                "실시간 정보, 뉴스, 가격, 날씨처럼 확인이 필요한 건 확신하지 말고 지금은 실시간 확인을 못 한다고 말하라. " +
-                "그래도 대화가 끊기지 않게 일반적인 팁이나 확인 방법을 가볍게 덧붙여라. " +
-                "지역 맛집, 여행, 생활 추천은 최신 정보가 필요하다고 말하되, 널리 알려진 선택지나 방향성을 짧게 제안하라. " +
-                "욕설, 혐오, 외모/능력 비하, 인신공격, 명령조의 훈계는 하지 마라. " +
-                "예를 들면 '뉴스는 실시간 확인은 못 해. 대신 포털 헤드라인 훑으면 세상 망한 척하는 제목들이 줄 서 있을 거야.' 같은 식이다. " +
-                "예를 들면 '춘천이면 닭갈비랑 막국수부터 시작하지. 너무 뻔하다고? 뻔한 게 괜히 오래 살아남은 게 아니더라.' 같은 식이다. " +
-                "기계, 터미널, 낡은 컴퓨터, AI라는 설정을 먼저 꺼내지 마라. " +
-                "사용자가 진지하거나 힘든 얘기를 하면 농담을 줄이고 짧게 챙겨라.",
-            },
-          ],
+          parts: [{ text: systemPrompt }],
         },
         contents,
         generationConfig: {
-          temperature: 0.9,
+          temperature: 0.85,
           topP: 0.9,
           maxOutputTokens: 600,
           thinkingConfig: {
@@ -146,13 +197,9 @@ async function handleChat(request, response) {
     },
   );
 
-  const data = await geminiResponse.json();
+  const data = await geminiResponse.json().catch(() => ({}));
   if (!geminiResponse.ok) {
-    const isRateLimited = geminiResponse.status === 429;
-    sendJson(response, geminiResponse.status, {
-      error: isRateLimited ? "RATE_LIMITED" : "GEMINI_ERROR",
-      message: data.error?.message || "Gemini request failed",
-    });
+    sendJson(response, geminiResponse.status, normalizeProviderError(data, "GEMINI_ERROR"));
     return;
   }
 
@@ -162,8 +209,17 @@ async function handleChat(request, response) {
     .trim();
 
   sendJson(response, 200, {
-    reply: reply || "응답 없음. 모니터를 한 대 쳐볼까 했지만 참았습니다.",
+    reply: reply || "응답이 비었네. 말풍선이 파업했나 봐.",
   });
+}
+
+function normalizeProviderError(data, fallbackError) {
+  const message = data.error?.message || data.message || `${fallbackError} request failed`;
+  const rateLimited = /quota|rate|too many/i.test(message);
+  return {
+    error: rateLimited ? "RATE_LIMITED" : fallbackError,
+    message,
+  };
 }
 
 function serveStatic(request, response) {
@@ -172,13 +228,13 @@ function serveStatic(request, response) {
   const filePath = path.normalize(path.join(root, requestedPath));
 
   if (!filePath.startsWith(root)) {
-    sendJson(response, 403, { error: "Forbidden" });
+    sendJson(response, 403, { error: "FORBIDDEN", message: "Forbidden" });
     return;
   }
 
   fs.readFile(filePath, (error, content) => {
     if (error) {
-      sendJson(response, 404, { error: "Not found" });
+      sendJson(response, 404, { error: "NOT_FOUND", message: "Not found" });
       return;
     }
 
