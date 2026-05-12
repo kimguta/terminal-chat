@@ -132,6 +132,7 @@ async function getBootMessage() {
 
     return buildBootMessage({
       server: status.server || DEFAULT_BOOT_STATUS.server,
+      provider: status.provider || "LOCAL",
       model: status.model || DEFAULT_BOOT_STATUS.model,
       api: status.api || DEFAULT_BOOT_STATUS.api,
       now,
@@ -163,6 +164,7 @@ function buildBootMessage(status) {
     "C:\\CHAT> INIT",
     `TIME ${status.now}`,
     `SERVER ${status.server}`,
+    `PROVIDER ${status.provider}`,
     `MODEL ${status.model}`,
     `API ${status.api}`,
     "TYPE AND PRESS ENTER",
